@@ -1,34 +1,82 @@
 from collections import UserDict
-
+import datetime
 
 class Field:
     def __init__(self, value):
-        self.value = value
+        self._value = value
 
     def __str__(self):
         return str(self.value)
 
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, new_value):
+        self._value = new_value
 
 class Name(Field):
     def __init__(self, name):
         super().__init__(name)
 
-
 class Phone(Field):
-    def __init__(self, phone):
-        self.phone = phone
-        if not self.validator(phone):
-            raise ValueError('Incorrect phone format was entered!')
-        super().__init__(phone)
+    def __init__(self, phone_str):
+        self._phone = None
+        self.phone = phone_str
+        super().__init__(self._phone)
 
-    def validator(self, phone):
-        return phone.isdigit() and len(phone) == 10
+    @property
+    def phone(self):
+        return self._phone
 
+    @phone.setter
+    def phone(self, phone_str):
+        if phone_str.isdigit() and len(phone_str) == 10:
+            self._phone = phone_str
+        else:
+            raise ValueError('Incorrect phone format was entered! Correct format is 1234567890')
+
+
+class Birthday(Field):
+    def __init__(self, birthdate_str=None):
+        self._birthdate = None
+        if birthdate_str is not None:
+            super().__init__(birthdate_str)
+            self.birthdate = birthdate_str
+
+    @property
+    def birthdate(self):
+        return self._birthdate
+
+    @birthdate.setter
+    def birthdate(self, birthdate_str):
+        if birthdate_str is None:
+            self._birthdate = None
+        else:
+            try:
+                self._birthdate = datetime.datetime.strptime(birthdate_str, '%Y-%m-%d').date()
+            except ValueError:
+                raise ValueError('Incorrect birthday date format entered! It must be "[year]-[month]-[day]" ')
 
 class Record:
-    def __init__(self, name):
+    def __init__(self, name, birthdate = None):
         self.name = Name(name)
+        self.birthdate = Birthday(birthdate)
         self.phones = []
+
+    def __str__(self):
+        phone_str = ", ".join(str(i) for i in self.phones)
+        return f"Contact name: {self.name}, phones: {phone_str}"
+
+    def days_to_birthday(self):
+        if self.birthdate.birthdate:
+            today = datetime.date.today()
+            next_birthday = self.birthdate.birthdate.replace(year=today.year)
+            if today > next_birthday:
+                next_birthday = next_birthday.replace(year=today.year + 1)
+            days_left = (next_birthday - today).days
+            return days_left
 
     def add_phone(self, phone):
         phone_instance = Phone(phone)
@@ -55,7 +103,6 @@ class Record:
         if found == False:
             raise ValueError
 
-
 class AddressBook(UserDict):
     def add_record(self, record):
         self.data[record.name.value] = record
@@ -67,3 +114,22 @@ class AddressBook(UserDict):
     def delete(self, record):
         if record in self.data:
             del self.data[record]
+
+    # def __iter__(self):
+    #     return iter(self.data.values())
+
+class AddressBookIterator:
+    def __init__(self, address_book, n=1):
+        self.address_book = address_book
+        self.n = n
+        self.index = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.index >= self.n:
+            raise StopIteration
+        records = list(self.address_book.data.values())[self.index:self.index + self.n]
+        self.index += self.n
+        return [str(record) for record in records]

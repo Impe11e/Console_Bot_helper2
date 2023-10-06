@@ -1,5 +1,6 @@
 from collections import UserDict
 import datetime
+import pickle
 
 class Field:
     def __init__(self, value):
@@ -16,9 +17,11 @@ class Field:
     def value(self, new_value):
         self._value = new_value
 
+
 class Name(Field):
     def __init__(self, name):
         super().__init__(name)
+
 
 class Phone(Field):
     def __init__(self, phone_str):
@@ -58,6 +61,7 @@ class Birthday(Field):
                 self._birthdate = datetime.datetime.strptime(birthdate_str, '%Y-%m-%d').date()
             except ValueError:
                 raise ValueError('Incorrect birthday date format entered! It must be "[year]-[month]-[day]" ')
+
 
 class Record:
     def __init__(self, name, birthdate = None):
@@ -115,8 +119,32 @@ class AddressBook(UserDict):
         if record in self.data:
             del self.data[record]
 
+    def packing_data(self, filename):
+        with open(filename, 'wb') as fh:
+            pickle.dump(self.data, fh)
+
+    def unpacking_data(self, filename):
+        try:
+            with open(filename, 'rb') as fh:
+                file = pickle.load(fh)
+                return file
+        except Exception as e:
+            print(f'Error: {e}')
+            return None
+
+    def searching(self, user_info):
+        matching_records = []
+        for record in self.data.values():
+            if (user_info.lower() in record.name.value.lower()) or any(user_info in phone.value for phone in record.phones):
+                matching_records.append(str(record))
+        if matching_records:
+            print(matching_records)
+        else:
+            print("No matches found!")
+
     # def __iter__(self):
     #     return iter(self.data.values())
+
 
 class AddressBookIterator:
     def __init__(self, address_book, n=1):
